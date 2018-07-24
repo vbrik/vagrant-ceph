@@ -1,0 +1,45 @@
+# vim:ft=ruby:tabstop=2:softtabstop=2:shiftwidth=2
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/bionic64"
+  config.ssh.forward_agent = true
+  config.ssh.insert_key = false
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.provision :file, source: "/etc/bash/bashrc.d/bashrc.local", destination: "/tmp/bash.bashrc"
+  config.vm.provision :file, source: "/etc/inputrc", destination: "/tmp/inputrc"
+  config.vm.provision :shell, :inline => <<-EOF
+      set -x
+      timedatectl set-timezone America/Chicago
+      cp -v /tmp/inputrc /etc
+      cp -v /tmp/bash.bashrc /etc
+      echo alias ls=\"ls --color=auto\" >> /etc/bash.bashrc
+      echo 'if [[ $- == *i* ]] ; then mountpoint -q /vagrant && HISTFILE=/vagrant/hist_$(hostname -s); fi' >> /etc/bash.bashrc
+      sed -i '/alias /d' /root/.bashrc /home/vagrant/.bashrc
+      sed -i -e 's/defaults/noatime,nodiscard,nobarrier,dioread_nolock/g' /etc/fstab
+    EOF
+  config.vm.provision :shell, :inline => <<-EOF
+      set -x
+      # purging these will make the system unbootable
+      apt-get remove -y libplymouth4 libfreetype6
+      rm -v /etc/init.d/plymouth*
+      apt-get purge -y lxd-client snapd python3-twisted btrfs-progs apport ebtables irqbalance \
+        open-iscsi lvm2 open-vm-tools geoip-database ntfs-3g ufw tcpdump vim-tiny unattended-upgrades \
+        iso-codes libx11-data nano apparmor lxcfs mdadm linux-headers-4.15.0-29 linux-image-virtual
+      rm -rfv /etc/apparmor.d
+      apt-get update
+      apt-get install -y openntpd ntpdate jq ceph-deploy
+    EOF
+  config.vm.provision :shell, :privileged => false, :inline => <<-EOF
+      ssh-keyscan 127.0.0.1 >> ~/.ssh/known_hosts 2> /dev/null
+      ceph-deploy install --release=luminous 127.0.0.1
+    EOF
+  config.vm.provision :shell, :inline => <<-EOF
+      set -x
+      apt-get clean
+      rm -rf /var/lib/apt/lists
+      rm -rf /var/cache/apt
+      updatedb
+      dd if=/dev/zero of=/EMPTY bs=1M; rm -fv /EMPTY
+      df -h
+    EOF
+end
