@@ -13,7 +13,7 @@ Vagrant.configure("2") do |config|
       cp -v /tmp/inputrc /etc
       cp -v /tmp/bash.bashrc /etc
       echo alias ls=\"ls --color=auto\" >> /etc/bash.bashrc
-      echo 'if [[ $- == *i* ]] ; then mountpoint -q /vagrant && HISTFILE=/vagrant/hist_$(hostname -s); fi' >> /etc/bash.bashrc
+      echo 'if [[ $- == *i* ]] ; then mountpoint -q /vagrant && HISTFILE=/vagrant/$(hostname -s).hist; fi' >> /etc/bash.bashrc
       sed -i '/alias /d' /root/.bashrc /home/vagrant/.bashrc
       sed -i -e 's/defaults/noatime,nodiscard,nobarrier,dioread_nolock/g' /etc/fstab
     EOF
@@ -23,7 +23,7 @@ Vagrant.configure("2") do |config|
       apt-get remove -y libplymouth4 libfreetype6
       rm -v /etc/init.d/plymouth*
       apt-get purge -y lxd-client snapd python3-twisted btrfs-progs apport ebtables irqbalance \
-        open-iscsi lvm2 open-vm-tools geoip-database ntfs-3g ufw tcpdump vim-tiny unattended-upgrades \
+        open-iscsi open-vm-tools geoip-database ntfs-3g ufw tcpdump vim-tiny unattended-upgrades \
         iso-codes libx11-data nano apparmor lxcfs mdadm linux-headers-4.15.0-29 linux-image-virtual
       rm -rfv /etc/apparmor.d
       apt-get update
