@@ -13,7 +13,7 @@ Vagrant.configure("2") do |config|
       server.vm.hostname = "ceph-server-#{i}"
       server.vm.network :private_network, ip: "172.21.12.#{i+11}"
       server.persistent_storage.enabled = true
-      server.persistent_storage.size = 10000
+      server.persistent_storage.size = 100 * 1000 #GB
       server.persistent_storage.partition = false
       server.persistent_storage.use_lvm = false
       server.persistent_storage.location = File.join(vagrant_root, "ceph-server-#{i}.vdi")
