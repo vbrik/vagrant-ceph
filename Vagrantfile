@@ -28,8 +28,8 @@ Vagrant.configure("2") do |config|
   config.vm.define "ceph-admin" do |admin|
     admin.vm.hostname = "ceph-admin"
     admin.vm.network :private_network, ip: "172.21.12.10"
-    admin.vm.provision :shell, :privileged => false, :inline => "ssh-keyscan ceph-client ceph-server-{1..3} >> ~/.ssh/known_hosts 2> /dev/null"
-    admin.vm.provision :shell, :inline => "ssh-keyscan ceph-client ceph-server-{1..3} >> ~/.ssh/known_hosts 2> /dev/null"
+    admin.vm.provision :shell, :privileged => false, \
+      :inline => "ssh-keyscan ceph-client ceph-server-{1..3} >> ~/.ssh/known_hosts 2> /dev/null"
   end
 end
 

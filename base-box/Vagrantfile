@@ -1,56 +1,39 @@
 # vim:ft=ruby:tabstop=2:softtabstop=2:shiftwidth=2
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu/bionic64"
+  config.vm.box = "bento/centos-7.5"
   config.vm.box_check_update = false
   config.vm.provider "virtualbox" do |vb|
-    # Undo console logging set up in ubuntu/bionic64 because it redirects to an
-    # absolute file path that is hard-coded when the box is created, annoyances
-    # like spurious files and VM failures if those files can't be created (e.g.
-    # because vagrant directory was moved).
-    vb.customize ["modifyvm", :id, "--uartmode1", "disconnected"]
     vb.cpus = 2
   end
   config.ssh.forward_agent = true
   config.ssh.insert_key = false
   config.vm.synced_folder ".", "/vagrant", disabled: true
-  config.vm.provision :file, source: "/etc/bash/bashrc.d/bashrc.local", destination: "/tmp/bash.bashrc"
+  config.vm.provision :file, source: "/etc/bash/bashrc.d/bashrc.local", destination: "/tmp/bashrc.local"
   config.vm.provision :file, source: "/etc/inputrc", destination: "/tmp/inputrc"
   config.vm.provision :file, source: "/etc/vim/vimrc", destination: "/tmp/vimrc"
-  config.vm.provision :shell, :inline => <<-EOF
+  config.vm.provision :shell, :inline => <<-'EOF'
       set -x
-      timedatectl set-timezone America/Chicago
+      ln -sfv /usr/share/zoneinfo/America/Chicago /etc/localtime
       cp -v /tmp/inputrc /etc
-      cp -v /tmp/bash.bashrc /etc
-      cp -v /tmp/vimrc /etc/vim
-      echo "set ignorecase smartcase" >> /etc/vim/vimrc
-      echo 'alias ls=\"ls --color=auto\"' >> /etc/bash.bashrc
-      echo 'if [[ $- == *i* ]] ; then mountpoint -q /vagrant && HISTFILE=/vagrant/$(hostname -s).hist; fi' >> /etc/bash.bashrc
-      sed -i '/alias /d' /root/.bashrc /home/vagrant/.bashrc
-      sed -i -e 's/defaults/noatime,nodiscard,nobarrier,dioread_nolock/g' /etc/fstab
-      echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
-      # make systemd boot messages visible
-      sed -i -e 's/console=tty1 console=ttyS0//g' /etc/default/grub
-      rm /etc/default/grub.d/50-cloudimg-settings.cfg
-      grub-mkconfig -o /boot/grub/grub.cfg
+      cp -v /tmp/bashrc.local /etc/profile.d/bashrc.local.sh
+      cp -v /tmp/vimrc /etc/vimrc
+      sed 's/^        //;s/  /\t/g' << "        END" > /etc/profile.d/zzz_vagrant.sh
+        if [[ $- == *i* ]]; then
+          if [[ ${EUID} == 0 ]]; then
+            export PS1="\[\e[37m\]\[\e[7m\]\h\[\e[00m\] \[\e[01;34m\]\W #\[\e[00m\] "
+          else
+            export PS1="\[\e[37m\]\u@\h \[\e[01;34m\]\W $\[\e[00m\] "
+          fi
+          alias vi=vim
+          mountpoint -q /vagrant && HISTFILE=/vagrant/$(hostname -s).hist
+        fi
+        END
     EOF
-#  config.vm.provision :shell, :inline => <<-EOF
-#      set -x
-#      # purging these will make the system unbootable
-#      apt-get remove -y libplymouth4 libfreetype6
-#      rm -v /etc/init.d/plymouth*
-#      apt-get purge -y lxd-client snapd python3-twisted btrfs-progs apport ebtables irqbalance open-iscsi  \
-#        open-vm-tools geoip-database ntfs-3g ufw tcpdump vim-tiny unattended-upgrades iso-codes apparmor \
-#        libx11-data nano lxcfs mdadm linux-headers-4.15.0-29 linux-image-virtual console-setup libicu60 \
-#        perl-modules-5.26 command-not-found-data dnsmasq-base apt-transport-https libmspack0 libpng16-16 \
-#        libisns0 libnuma1 tzdata libgeoip1 libdrm2 libdumbnet1 libntfs-3g88 libgdbm-compat4 libxcb1 \
-#        liblwres160 libpcap0.8
-#      rm -rfv /etc/apparmor.d
-#    EOF
   config.vm.provision :shell, :inline => <<-EOF
       set -x
-      apt-get update
-      apt-get install -y openntpd ntpdate jq dstat ceph-deploy
+      yum install -y https://download.ceph.com/rpm-luminous/el7/noarch/ceph-release-1-0.el7.noarch.rpm
+      yum install -y jq dstat mlocate python-setuptools vim-enhanced bash-completion-extras ceph-deploy
     EOF
   config.vm.provision :shell, :privileged => false, :inline => <<-EOF
       ssh-keyscan 127.0.0.1 >> ~/.ssh/known_hosts 2> /dev/null
@@ -58,11 +41,6 @@ Vagrant.configure("2") do |config|
     EOF
   config.vm.provision :shell, :inline => <<-EOF
       set -x
-      apt-get clean
-      #rm -rf /var/lib/apt/lists
-      #rm -rf /var/cache/apt
       updatedb
-      dd if=/dev/zero of=/EMPTY bs=1M; rm -fv /EMPTY
-      df -h
     EOF
 end

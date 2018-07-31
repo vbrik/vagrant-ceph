@@ -1,8 +1,7 @@
 #!/bin/bash
-
-pvcreate /dev/sdc
-vgcreate pvs /dev/sdc
-lvcreate -l 25%VG -n a pvs
-lvcreate -l 25%VG -n b pvs
-lvcreate -l 25%VG -n c pvs
-lvcreate -l 25%VG -n d pvs
+set -xe
+pvcreate /dev/sdb
+vgcreate pvs /dev/sdb
+lvcreate -l 33%VG -n a pvs
+lvcreate -l 33%VG -n b pvs
+lvcreate -l 33%VG -n c pvs
