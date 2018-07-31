@@ -20,9 +20,11 @@ for s in ceph-server-{1..3}; do
 done
 ceph-deploy mds create ceph-server-1
 ceph-deploy rgw create ceph-server-1
+ceph osd pool create rbd 8
+ceph osd pool application enable rbd rbd
 ceph health
 ceph -s
 
-ceph-deploy mon add ceph-server-3
+#ceph-deploy mon add ceph-server-3
 
 # vim:noexpandtab

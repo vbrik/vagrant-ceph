@@ -3,37 +3,32 @@
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/centos-7.5"
   config.vm.box_check_update = false
-  config.vm.provider "virtualbox" do |vb|
-    vb.cpus = 2
-  end
-  config.ssh.forward_agent = true
+  config.ssh.forward_agent = true  
   config.ssh.insert_key = false
-  config.vm.synced_folder ".", "/vagrant", disabled: true
-  config.vm.provision :file, source: "/etc/bash/bashrc.d/bashrc.local", destination: "/tmp/bashrc.local"
-  config.vm.provision :file, source: "/etc/inputrc", destination: "/tmp/inputrc"
-  config.vm.provision :file, source: "/etc/vim/vimrc", destination: "/tmp/vimrc"
   config.vm.provision :shell, :inline => <<-'EOF'
       set -x
       ln -sfv /usr/share/zoneinfo/America/Chicago /etc/localtime
-      cp -v /tmp/inputrc /etc
-      cp -v /tmp/bashrc.local /etc/profile.d/bashrc.local.sh
-      cp -v /tmp/vimrc /etc/vimrc
-      sed 's/^        //;s/  /\t/g' << "        END" > /etc/profile.d/zzz_vagrant.sh
-        if [[ $- == *i* ]]; then
-          if [[ ${EUID} == 0 ]]; then
-            export PS1="\[\e[37m\]\[\e[7m\]\h\[\e[00m\] \[\e[01;34m\]\W #\[\e[00m\] "
-          else
-            export PS1="\[\e[37m\]\u@\h \[\e[01;34m\]\W $\[\e[00m\] "
-          fi
-          alias vi=vim
-          mountpoint -q /vagrant && HISTFILE=/vagrant/$(hostname -s).hist
-        fi
-        END
+      cd /vagrant/files/
+      cp -v inputrc vimrc /etc/
+      cp -v zzz_vagrant.sh prompt.sh bashrc.local.sh /etc/profile.d/
+      cd -
+      ssh-add -L >> /home/vagrant/.ssh/authorized_keys
+      mkdir /root/.ssh
+      ssh-add -L >> /root/.ssh/authorized_keys
+      chmod 700 /root/.ssh
+      chmod 600 /root/.ssh/authorized_keys
+      sed -i '/alias /d' /root/.bashrc
+      sed -i -e 's/xfs     defaults/xfs nobarrier/g' /etc/fstab
+      sed -i -e 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' /etc/default/grub
+      sed -i -e 's/rhgb quiet//g' /etc/default/grub
+      grub2-mkconfig -o /etc/grub2.cfg
     EOF
   config.vm.provision :shell, :inline => <<-EOF
       set -x
+      yum erase -y linux-firmware
       yum install -y https://download.ceph.com/rpm-luminous/el7/noarch/ceph-release-1-0.el7.noarch.rpm
-      yum install -y jq dstat mlocate python-setuptools vim-enhanced bash-completion-extras ceph-deploy
+      yum install -y epel-release
+      yum install -y jq dstat mlocate vim-enhanced bash-completion-extras python-setuptools ceph-deploy
     EOF
   config.vm.provision :shell, :privileged => false, :inline => <<-EOF
       ssh-keyscan 127.0.0.1 >> ~/.ssh/known_hosts 2> /dev/null
@@ -42,5 +37,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision :shell, :inline => <<-EOF
       set -x
       updatedb
+      yum clean all
+      time dd if=/dev/zero of=/EMPTY bs=1M; rm -fv /EMPTY
     EOF
 end
