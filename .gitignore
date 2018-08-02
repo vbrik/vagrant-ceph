@@ -3,3 +3,5 @@
 *.vdi
 *.hist
 .vagrant
+base-box/ceph-base.box
+base-box/packages/
