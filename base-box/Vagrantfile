@@ -22,6 +22,10 @@ Vagrant.configure("2") do |config|
       sed -i -e 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' /etc/default/grub
       sed -i -e 's/rhgb quiet//g' /etc/default/grub
       grub2-mkconfig -o /etc/grub2.cfg
+      ln -s /vagrant /v
+      echo 'setterm -term linux -blank 0 < /dev/tty0 > /dev/tty0' >> /etc/rc.local
+      chmod +x /etc/rc.d/rc.local
+      cat /vagrant/files/hosts.append >> /etc/hosts
     EOF
   config.vm.provision :shell, :inline => <<-EOF
       set -x
@@ -29,6 +33,9 @@ Vagrant.configure("2") do |config|
       yum install -y https://download.ceph.com/rpm-luminous/el7/noarch/ceph-release-1-0.el7.noarch.rpm
       yum install -y epel-release
       yum install -y dstat mlocate vim-enhanced bash-completion-extras python-setuptools ceph-deploy
+      bash <(curl -Ss https://my-netdata.io/kickstart-static64.sh) --non-interactive --dont-start-it
+      echo -e '[health]\nenabled = no' > /opt/netdata/etc/netdata/netdata.conf
+      systemctl disable netdata
     EOF
   config.vm.provision :shell, :privileged => false, :inline => <<-EOF
       ssh-keyscan 127.0.0.1 >> ~/.ssh/known_hosts 2> /dev/null
